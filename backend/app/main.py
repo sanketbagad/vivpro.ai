@@ -1,21 +1,26 @@
-from contextlib import asynccontextmanager
 import os
+from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.database import Base, SessionLocal, engine
 from app.routes.songs import router
-from app.services.data_processor import data_store
+from app.services.data_processor import seed_database
+
+DATA_FILE = Path(__file__).parent.parent / "data" / "playlist.json"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Load data on startup
-    data_path = os.path.join(os.path.dirname(__file__), "..", "data", "playlist.json")
-    data_path = os.path.abspath(data_path)
-    data_store.load(data_path)
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        seed_database(db, str(DATA_FILE))
+    finally:
+        db.close()
     yield
-    # Cleanup on shutdown (nothing needed here)
 
 
 app = FastAPI(title="Songs Playlist Dashboard", version="1.0.0", lifespan=lifespan)
@@ -33,4 +38,4 @@ app.include_router(router, prefix="/api")
 
 @app.get("/")
 def root():
-    return {"status": "ok"}
+    return {"status": "ok", "db": os.getenv("DATABASE_URL", "sqlite (default)")}

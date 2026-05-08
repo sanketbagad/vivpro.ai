@@ -18,6 +18,11 @@ frontend/.vite/
 .env
 .env.local
 
+# SQLite (test & local dev fallback)
+*.db
+*.db-shm
+*.db-wal
+
 # OS
 .DS_Store
 Thumbs.db
